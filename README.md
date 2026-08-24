@@ -75,6 +75,8 @@ Extra: `profile_data` + `query_sql` + `get_tool_status` como características pl
 
 ## 3. Demo visual
 
+![Demo GIF](demo.gif)
+
 **CLI con Rich:** tablas cyan/magenta, panels, spinner `dots12`.
 **Informe HTML MOD** `salida/informe_*.html`: header gradiente `#0a0e14→#1a1033`, badges neon, galería base64.
 **Gráficos MOD** `visual_motor.py`: histograma KDE, barras horizontales, heatmap anotado, serie temporal — `180dpi`, `seaborn`, fondo `#151a23`, paleta neon.
@@ -162,7 +164,8 @@ Formatos soportados: `csv/tsv/csv.gz, xlsx/xls, json, parquet, db/sqlite/duckdb,
 
 - [x] CLI Rich + HTML MOD + 180dpi
 - [x] Limpieza IQR + ML evaluado + KMeans + Shapiro
-- [x] Batch + MCP Server 9 tools
+- [x] Batch + MCP Server 10 tools
+- [x] Demo GIF 35s vivo opencode + docs
 - [ ] Streamlit drag&drop
 - [ ] ARIMA/Prophet
 
