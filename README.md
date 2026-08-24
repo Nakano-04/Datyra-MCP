@@ -101,28 +101,73 @@ Clasificación `nucleo.py:22` por keywords + `ORDEN_PRECEDENCIA`: `ml > big_data
 
 ## 5. Instalación
 
+### 5.1 Requisitos
+`Python 3.10+` + `pip`
+
+### 5.2 Instalación base (CLI)
 ```bash
 cd Mediador-Analisis-de-Datos
 py -m venv .venv; .venv\Scripts\activate  # Windows
+# Linux/Mac: python3 -m venv .venv; source .venv/bin/activate
 pip install -r requirements.txt
-pip install -r requirements-extra.txt  # jupyter/pyspark opcional
+pip install -r requirements-extra.txt  # opcional: jupyter/pyspark
 py mediador_ia.py -t; py mediador_ia.py -l
+py mediador_ia.py "analiza las ventas"  # test rapido
 ```
 
 **requirements.txt:** `pandas, openpyxl, matplotlib, seaborn, scipy, scikit-learn, rich, jinja2, mcp, anyio, httpx, uvicorn, starlette`
 
+### 5.3 Instalación con opencode (MCP)
+```bash
+npm install -g opencode-ai@latest
+opencode --version  # verificar 1.18.22+
+```
+**Configurar MCP** — crea `opencode.json` en tu proyecto o global `~/.config/opencode/opencode.jsonc`:
+```json
+{
+  "mcp": {
+    "datyra-mcp": {
+      "type": "local",
+      "command": ["py", "C:/ruta/a/Mediador-Analisis-de-Datos/mcp_server.py"],
+      "enabled": true
+    }
+  }
+}
+```
+Ver `.opencode.json.example` y `mcp.json` incluidos. Luego:
+```bash
+opencode mcp list  # debe salir ✓ datyra-mcp connected
+```
+> Solo sesion: crea `opencode.json` solo en `C:\ruta\proyecto\opencode.json` y borralo al terminar.
+
 ---
 
-## 6. Uso CLI
+## 6. Uso
 
+### 6.1 CLI directo
 ```bash
 py mediador_ia.py "analiza las ventas"
 py mediador_ia.py "genera dashboard de mineria con graficos"
 py mediador_ia.py "predice moroso con machine learning en finanzas"
 py mediador_ia.py "analisis estadistico correlacion"
-py mediador_ia.py "analiza todos batch"  # batch
+py mediador_ia.py "analiza todos batch"  # batch todos los CSVs
 py mediador_ia.py                        # REPL: -l, -t, !cmd, salir
+# flags: -l lista datasets, -t test motores, -o salida/, -v verbose
 ```
+
+### 6.2 Con opencode (MCP vivo)
+```bash
+opencode                          # abre TUI
+# dentro de opencode escribe:
+"analiza finanzas_masivo 20k filas: limpia IQR/nulos, EDA skew+Pearson, RF150 moroso, dashboard 4 graficos"
+# o headless:
+opencode run "analiza ventas con dashboard 4 graficos"
+```
+**Flujo MCP:** `opencode → datyra-mcp → nucleo.clasificar() → MOTOR_POR_CLAVE → visual_motor MOD → salida/informe_*.html`
+Luego abre `salida/informe_*.html` en Edge/Chrome (`--app` sin tabs) y `salida/*.png` 180dpi.
+
+### 6.3 Herramientas MCP (desde cualquier IA)
+`analyze_data`, `list_datasets`, `run_statistics`, `train_model`, `generate_dashboard`, `batch_process`, `profile_data`, `query_sql`, `get_tool_status`, `author_info`
 
 ## 7. Datasets masivos incluidos (test)
 
