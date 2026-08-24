@@ -1,0 +1,26 @@
+fecha,region,producto,cantidad,precio_unitario,ingreso
+2026-01-05,Lima,Monitor 24",12,320.00,3840.00
+2026-01-08,Arequipa,Teclado mecanico,45,85.50,3847.50
+2026-01-12,Lima,SSD 1TB,30,145.00,4350.00
+2026-01-15,Cusco,Mouse gamer,60,40.00,2400.00
+2026-01-19,Lima,Laptop 15",8,950.00,7600.00
+2026-01-22,Trujillo,Monitor 24",15,320.00,4800.00
+2026-01-26,Arequipa,RAM 16GB,50,65.00,3250.00
+2026-01-29,Lima,Teclado mecanico,20,85.50,1710.00
+2026-02-02,Cusco,SSD 1TB,25,145.00,3625.00
+2026-02-05,Lima,Mouse gamer,70,40.00,2800.00
+2026-02-09,Trujillo,Laptop 15",5,950.00,4750.00
+2026-02-12,Lima,RAM 16GB,60,65.00,3900.00
+2026-02-16,Arequipa,Monitor 24",10,320.00,3200.00
+2026-02-19,Lima,Teclado mecanico,35,85.50,2992.50
+2026-02-23,Cusco,Mouse gamer,55,40.00,2200.00
+2026-02-26,Lima,SSD 1TB,40,145.00,5800.00
+2026-03-02,Trujillo,RAM 16GB,28,65.00,1820.00
+2026-03-05,Lima,Laptop 15",12,950.00,11400.00
+2026-03-09,Arequipa,Teclado mecanico,50,85.50,4275.00
+2026-03-12,Lima,Mouse gamer,65,40.00,2600.00
+2026-03-16,Cusco,Monitor 24",18,320.00,5760.00
+2026-03-19,Lima,SSD 1TB,33,145.00,4785.00
+2026-03-23,Trujillo,Mouse gamer,42,40.00,1680.00
+2026-03-26,Lima,Teclado mecanico,25,85.50,2137.50
+2026-03-30,Arequipa,Laptop 15",9,950.00,8550.00
