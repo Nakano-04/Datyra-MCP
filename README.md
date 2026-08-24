@@ -1,4 +1,4 @@
-# Analvex MCP
+# Datyra MCP
 
 Data analysis mediator and MCP (Model Context Protocol) implementation.
 
