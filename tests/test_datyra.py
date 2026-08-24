@@ -53,7 +53,8 @@ def test_visual_motor(tmp_path):
     arch = next(a for a in inv if "mineria" in a["ruta"].name)
     res = visual_motor.ejecutar("genera dashboard", arch, tmp_path)
     assert "Grafico" in res["salida"]
-    assert len(list(tmp_path.glob("*.png"))) >= 3
+    pngs = list(tmp_path.glob("*.png")) + list((tmp_path / "cuadros").glob("*.png"))
+    assert len(pngs) >= 3
 
 def test_nucleo_ejecutar(tmp_path):
     res = nucleo.ejecutar_peticion("analiza las ventas", salida_dir=str(tmp_path))
@@ -75,9 +76,9 @@ def test_mcp_tools():
 
 def test_masivos_escala():
     for name, expected_min in [("ciberseguridad_masivo.csv",20000), ("finanzas_masivo.csv",20000), ("mineria_masivo.csv",15000)]:
-        p = contexto.carpeta_recursos()/name
-        assert p.exists()
-        assert p.stat().st_size > 500_000
         inv = contexto.inventario()
         arch = next(a for a in inv if name==a["ruta"].name)
+        p = arch["ruta"]
+        assert p.exists()
+        assert p.stat().st_size > 500_000
         assert arch["filas"] >= expected_min

@@ -17,6 +17,15 @@ from mcp.server.fastmcp import FastMCP
 from mediador import contexto, herramientas, nucleo
 from mediador.motores import python_motor, visual_motor
 
+# Pre-import pesados para evitar deadlock en Windows stdio (anyio)
+try:
+    import pandas  # noqa: F401
+    import numpy  # noqa: F401
+    import scipy  # noqa: F401
+    import sklearn  # noqa: F401
+except Exception:
+    pass
+
 AUTHOR = "Nakano-04 — Mercenary Company 'Mercenario del rojo' | Software Engineer (Cybersecurity · AI · Systems · ERP) | nakano.04.2025@gmail.com | https://github.com/Nakano-04"
 
 mcp = FastMCP(
@@ -50,16 +59,15 @@ def analyze_data(peticion: str, dataset: Optional[str] = None, salida_dir: Optio
     """Analiza datos con lenguaje natural. Ej: 'analiza las ventas', 'limpia y resume ciberseguridad'. Si dataset se da, fuerza ese archivo."""
     carpeta = Path(salida_dir) if salida_dir else contexto.carpeta_salida()
     carpeta.mkdir(parents=True, exist_ok=True)
-    # si dataset especificado, reordenar inventario
     if dataset:
         inv = contexto.inventario()
         forced = next((a for a in inv if dataset.lower() in a["ruta"].name.lower()), None)
         if forced:
-            # truco: inyectar termino para que _elegir_archivo lo elija
             peticion = f"{peticion} {forced['ruta'].stem}"
-    res = nucleo.ejecutar_peticion(peticion, salida_dir=str(carpeta))
-    # buscar ultimo html
-    htmls = sorted(carpeta.glob("informe_*.html"), key=lambda p: p.stat().st_mtime, reverse=True)
+    res = nucleo.ejecutar_peticion(peticion, salida_dir=str(carpeta), silent=True)
+    # por tipo: html en html/ , compatibilidad con tmp_path
+    html_candidates = list(carpeta.glob("informe_*.html")) + list((carpeta / "html").glob("informe_*.html"))
+    htmls = sorted(html_candidates, key=lambda p: p.stat().st_mtime, reverse=True)
     html = str(htmls[0]) if htmls else ""
     return json.dumps({"motor": res.get("motor"), "salida": res.get("salida","")[:6000], "script": res.get("script"), "html": html}, ensure_ascii=False, indent=2)
 
@@ -85,9 +93,10 @@ def generate_dashboard(peticion: str = "genera dashboard con graficos", dataset:
     if dataset:
         peticion = f"{peticion} {dataset}"
     carpeta = contexto.carpeta_salida()
-    res = nucleo.ejecutar_peticion(peticion, salida_dir=str(carpeta))
-    pngs = sorted(carpeta.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)[:6]
-    htmls = sorted(carpeta.glob("informe_*.html"), key=lambda p: p.stat().st_mtime, reverse=True)
+    res = nucleo.ejecutar_peticion(peticion, salida_dir=str(carpeta), silent=True)
+    pngs = sorted(list((carpeta / "cuadros").glob("*.png")) + list(carpeta.glob("*.png")), key=lambda p: p.stat().st_mtime, reverse=True)[:6]
+    html_candidates = list(carpeta.glob("informe_*.html")) + list((carpeta / "html").glob("informe_*.html"))
+    htmls = sorted(html_candidates, key=lambda p: p.stat().st_mtime, reverse=True)
     return json.dumps({"salida": res.get("salida","")[:4000], "imagenes": [str(p) for p in pngs], "html": str(htmls[0]) if htmls else ""}, ensure_ascii=False, indent=2)
 
 @mcp.tool()
@@ -147,6 +156,80 @@ def query_sql(sql: str, db: Optional[str] = None) -> str:
         return json.dumps({"db": str(target), "columns": cols, "rows": rows, "total": len(rows)}, ensure_ascii=False, indent=2)
     except Exception as e:
         return f"SQL error: {e}"
+
+@mcp.tool()
+def identificar_fuentes(peticion: str = "", top_n: int = 5) -> str:
+    """Identifica fuentes relevantes con scoring (tipo, frescura, tamaño, match semántico)."""
+    res = contexto.identificar_fuentes_relevantes(peticion, top_n=top_n)
+    return json.dumps(res, ensure_ascii=False, indent=2, default=str)
+
+@mcp.tool()
+def extraer_api(url: str, formato: Optional[str] = None) -> str:
+    """Extrae datos de API REST/JSON/CSV y consolida en Data Lake bronze."""
+    from mediador.motores import api_motor
+    res = api_motor.ejecutar(f"extrae datos de {url} {formato or ''}", None, contexto.carpeta_salida(), modo="analisis")
+    return res["salida"]
+
+@mcp.tool()
+def colectar_streaming(peticion: str = "streaming 20 eventos", dataset: Optional[str] = None) -> str:
+    """Recolecta datos en tiempo real (streaming) a lake/bronze/silver/gold."""
+    from mediador.motores import streaming_motor
+    inv = contexto.inventario()
+    arch = next((a for a in inv if dataset and dataset.lower() in a["ruta"].name.lower()), None) if dataset else None
+    res = streaming_motor.ejecutar(peticion, arch, contexto.carpeta_salida(), modo="analisis")
+    return res["salida"]
+
+@mcp.tool()
+def consolidar_lake(capa: str = "all") -> str:
+    """Consolida Data Lake por capas bronze/silver/gold."""
+    lake_base = Path("salida/lake")
+    if capa == "all":
+        capas = ["bronze", "silver", "gold"]
+    else:
+        capas = [capa]
+    out = []
+    for c in capas:
+        p = lake_base / c
+        if p.exists():
+            files = list(p.glob("*"))
+            out.append(f"{c}: {len(files)} archivos → {p}")
+            for f in files[:3]:
+                out.append(f"  - {f.name} ({contexto.formatear_bytes(f.stat().st_size)})")
+        else:
+            out.append(f"{c}: vacío (no existe)")
+    # central catalog
+    central = contexto.carpeta_central()
+    cat = central / "catalogo_metadatos.json"
+    if cat.exists():
+        out.append(f"Catálogo: {cat} ({cat.stat().st_size} bytes)")
+    lin = central / "linaje.json"
+    if lin.exists():
+        out.append(f"Linaje: {lin}")
+    return "\n".join(out)
+
+@mcp.tool()
+def catalogo_metadatos() -> str:
+    """Documentación de metadatos y linaje de datos."""
+    cat = contexto.catalogo_metadatos()
+    # guardar
+    import json as js
+    central = contexto.carpeta_central()
+    out = central / "catalogo_metadatos.json"
+    out.write_text(js.dumps(cat, ensure_ascii=False, indent=2), encoding="utf-8")
+    (contexto.carpeta_salida() / "catalogo_metadatos.json").write_text(js.dumps(cat, ensure_ascii=False, indent=2), encoding="utf-8")
+    return js.dumps(cat, ensure_ascii=False, indent=2)
+
+@mcp.tool()
+def documentar_linaje() -> str:
+    """Muestra linaje del último análisis."""
+    import json as js
+    p = contexto.carpeta_central() / "linaje.json"
+    if p.exists():
+        return p.read_text(encoding="utf-8")
+    p2 = contexto.carpeta_salida() / "linaje.json"
+    if p2.exists():
+        return p2.read_text(encoding="utf-8")
+    return "No hay linaje aún. Ejecuta 'analiza las ventas' primero."
 
 if __name__ == "__main__":
     mcp.run()

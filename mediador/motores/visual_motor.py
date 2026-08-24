@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from .. import contexto, herramientas
 
@@ -41,7 +42,14 @@ def _graficos_matplotlib(archivo, salida_dir):
     if not contexto.hay_pandas():
         return "matplotlib/pandas no estan instalados: instala con: uv pip install pandas matplotlib seaborn"
     nombre = archivo["ruta"].name
-    script = salida_dir / f"graficos_{datetime.now():%Y%m%d_%H%M%S}.py"
+    # por tipo: scripts en scripts/, cuadros en cuadros/
+    try:
+        is_real = Path(salida_dir).resolve() == contexto.carpeta_salida().resolve()
+    except Exception:
+        is_real = False
+    script_dir = (contexto.carpeta_scripts() if is_real else Path(salida_dir))
+    script_dir.mkdir(parents=True, exist_ok=True)
+    script = script_dir / f"graficos_{datetime.now():%Y%m%d_%H%M%S}.py"
     codigo = '''import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -140,6 +148,52 @@ if len(numericas) >= 2:
     plt.close()
     print("Grafico 3:", archivo3)
 
+# Boxplot — distribución
+try:
+    if len(numericas) > 0:
+        fig, ax = plt.subplots(figsize=(10, 4.5), dpi=180)
+        if len(categoricas) > 0 and df[categoricas[0]].nunique() <= 12:
+            cat = categoricas[0]
+            top_cats = df[cat].value_counts().head(4).index
+            df_box = df[df[cat].isin(top_cats)]
+            sns.boxplot(data=df_box, x=cat, y=numericas[0], ax=ax, palette=PALETA, linewidth=1.2, fliersize=3)
+            estilo(fig, ax, f"Boxplot — {numericas[0]} por {cat}", "Distribución y outliers · MOD")
+        else:
+            sns.boxplot(data=df[numericas[:4]], ax=ax, palette=PALETA, linewidth=1.2, fliersize=3)
+            estilo(fig, ax, "Boxplots — variables numéricas", "Distribución · MOD")
+        ax.tick_params(axis='x', rotation=18)
+        plt.tight_layout()
+        archivo_box = os.path.join(ruta_salida, f"boxplot_{marca}.png")
+        plt.savefig(archivo_box, dpi=180, bbox_inches="tight")
+        plt.close()
+        print("Grafico boxplot:", archivo_box)
+except Exception as e:
+    pass
+
+# Scatter matrix (pairplot)
+try:
+    if len(numericas) >= 2:
+        import warnings
+        warnings.filterwarnings("ignore")
+        cols = list(numericas[:4])
+        # limitar a 500 filas para rendimiento
+        df_pair = df[cols].dropna().head(500)
+        if len(df_pair) >= 10:
+            g = sns.pairplot(df_pair, diag_kind="kde", plot_kws={"alpha":0.6, "s":18, "edgecolor": BG}, diag_kws={"color": PALETA[0]})
+            g.fig.suptitle(f"Scatter Matrix — {', '.join(cols)}", fontsize=13, fontweight="800", color=TEXT, y=1.02)
+            for ax in g.axes.flatten():
+                if ax is not None:
+                    ax.set_facecolor(CARD)
+                    for spine in ax.spines.values():
+                        spine.set_color(GRID)
+            plt.tight_layout()
+            archivo_scatter = os.path.join(ruta_salida, f"scatter_{marca}.png")
+            g.savefig(archivo_scatter, dpi=180, bbox_inches="tight")
+            plt.close('all')
+            print("Grafico scatter:", archivo_scatter)
+except Exception as e:
+    pass
+
 # Extra: serie temporal si hay fecha
 try:
     fecha_col = next((c for c in df.columns if "fecha" in c.lower() or "date" in c.lower()), None)
@@ -164,10 +218,13 @@ except Exception as e:
 
 print("Analisis de @NOMBRE@ completado · MOD dark.")
 '''
+    # cuadros en hija, central para archivo único
+    cuadros_dir = salida_dir / "cuadros"
+    cuadros_dir.mkdir(parents=True, exist_ok=True)
     codigo = (
         codigo
         .replace("@RUTA@", repr(str(archivo["ruta"])))
-        .replace("@SALIDA@", str(salida_dir))
+        .replace("@SALIDA@", str(cuadros_dir))
         .replace("@TS@", datetime.now().strftime("%Y%m%d_%H%M%S"))
         .replace("@NOMBRE@", nombre)
     )
@@ -175,6 +232,7 @@ print("Analisis de @NOMBRE@ completado · MOD dark.")
     resultado = subprocess.run(
         [sys.executable, str(script)], capture_output=True, text=True,
         encoding="utf-8", errors="replace", timeout=600, cwd=str(salida_dir),
+        stdin=subprocess.DEVNULL,
     )
     salida = resultado.stdout or ""
     if resultado.returncode != 0:

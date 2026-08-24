@@ -43,7 +43,35 @@ def carpeta_recursos():
 def carpeta_salida():
     carpeta = carpeta_base() / "salida"
     carpeta.mkdir(exist_ok=True)
+    # hijas por tipo — central queda para archivo único completo
+    for sub in ["cuadros", "html", "txt", "scripts", "central"]:
+        (carpeta / sub).mkdir(exist_ok=True)
     return carpeta
+
+def carpeta_cuadros():
+    c = carpeta_salida() / "cuadros"
+    c.mkdir(exist_ok=True)
+    return c
+
+def carpeta_html():
+    c = carpeta_salida() / "html"
+    c.mkdir(exist_ok=True)
+    return c
+
+def carpeta_txt():
+    c = carpeta_salida() / "txt"
+    c.mkdir(exist_ok=True)
+    return c
+
+def carpeta_scripts():
+    c = carpeta_salida() / "scripts"
+    c.mkdir(exist_ok=True)
+    return c
+
+def carpeta_central():
+    c = carpeta_salida() / "central"
+    c.mkdir(exist_ok=True)
+    return c
 
 
 def _tipo_de(archivo):
@@ -106,6 +134,91 @@ def inventario():
         for a in escanear()
     ]
 
+
+def identificar_fuentes_relevantes(peticion: str = "", top_n: int = 5):
+    """Identifica fuentes relevantes con scoring por tipo, frescura, tamaño y match semántico"""
+    import time
+    inv = inventario()
+    if not inv:
+        return []
+    terminos = [t for t in peticion.lower().split() if len(t) > 3] if peticion else []
+    scored = []
+    for a in inv:
+        score = 0
+        # tipo prioridad (csv > excel > parquet > json)
+        tipo_score = max(0, 10 - TIPO_PRIORIDAD.index(a["tipo"])) if a["tipo"] in TIPO_PRIORIDAD else 0
+        score += tipo_score * 2
+        # tamaño (normalizado, más filas = más relevante hasta 20k)
+        if a["filas"]:
+            score += min(a["filas"] / 5000, 4)
+        # frescura (mtime)
+        try:
+            mtime = a["ruta"].stat().st_mtime
+            age_days = (time.time() - mtime) / 86400
+            score += max(0, 3 - age_days / 30)  # más reciente = más score
+        except: pass
+        # match semántico con petición
+        nombre = a["ruta"].name.lower()
+        matches = sum(1 for t in terminos if t in nombre)
+        score += matches * 5
+        # bonus por estar en subcarpeta organizada (masivo/internet/ejemplo)
+        if "masivo" in str(a["ruta"]).lower():
+            score += 1
+        scored.append({**a, "score": round(score, 2), "relevancia": "alta" if score > 8 else "media" if score > 5 else "baja"})
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:top_n]
+
+def catalogo_metadatos():
+    """Genera catálogo de metadatos y linaje para Data Lake"""
+    import datetime, json, hashlib
+    inv = inventario()
+    catalogo = []
+    for a in inv:
+        try:
+            stat = a["ruta"].stat()
+            # linaje: origen -> bronze -> silver -> gold
+            linaje = {
+                "origen": str(a["ruta"]),
+                "bronze": f"lake/bronze/{a['ruta'].name}",
+                "silver": f"lake/silver/{a['ruta'].stem}_clean.parquet",
+                "gold": f"lake/gold/{a['ruta'].stem}_features.parquet",
+                "central": f"salida/central/informe_completo.html"
+            }
+            # hash para control de versiones
+            h = hashlib.md5(str(a["ruta"]).encode()).hexdigest()[:8]
+            catalogo.append({
+                "dataset": a["ruta"].name,
+                "tipo": a["tipo"],
+                "tamano": formatear_bytes(a["tamano"]),
+                "tamano_bytes": a["tamano"],
+                "filas": a["filas"],
+                "ruta": str(a["ruta"]),
+                "modificado": datetime.datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "linaje": linaje,
+                "version": h,
+                "esquema": _inferir_esquema(a["ruta"], a["tipo"])
+            })
+        except Exception as e:
+            catalogo.append({"dataset": a["ruta"].name, "error": str(e)})
+    return catalogo
+
+def _inferir_esquema(ruta, tipo):
+    if tipo != "csv":
+        return []
+    try:
+        with ruta.open("r", encoding="utf-8-sig", errors="ignore", newline="") as f:
+            reader = csv.reader(f)
+            header = next(reader, [])
+            sample = next(reader, [])
+            return [{"col": h, "ejemplo": s, "tipo_inferido": "numeric" if s.replace(".","",1).replace("-","",1).isdigit() else "text"} for h,s in zip(header, sample)]
+    except:
+        return []
+
+def carpeta_lake(capa: str = "bronze"):
+    """Data Lake por capas: bronze (raw), silver (clean), gold (features)"""
+    base = carpeta_base() / "salida" / "lake" / capa
+    base.mkdir(parents=True, exist_ok=True)
+    return base
 
 def _filas(p, tipo):
     if tipo == "csv":

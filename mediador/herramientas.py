@@ -38,8 +38,18 @@ def _buscar_tableau():
 
 def detectar():
     rscript = shutil.which("Rscript")
+    try:
+        import httpx
+        api_disp = True
+        api_ruta = "httpx"
+    except ImportError:
+        api_disp = False
+        api_ruta = None
     return {
         "python": {"disponible": True, "ruta": sys.executable, "detalle": "Analisis de datos, ML y automatizacion (pandas/sklearn)"},
+        "api": {"disponible": api_disp, "ruta": api_ruta, "detalle": "Extracción APIs REST/JSON/CSV (httpx)"},
+        "streaming": {"disponible": True, "ruta": "anyio", "detalle": "Recolección tiempo real (streaming) bronze/silver/gold"},
+        "lake": {"disponible": True, "ruta": str(Path(__file__).resolve().parent.parent / "salida" / "lake"), "detalle": "Data Lake por capas bronze/silver/gold"},
         "r": {"disponible": bool(rscript), "ruta": rscript, "detalle": "Analisis estadistico y visualizacion (Rscript)"},
         "jupyter": {"disponible": bool(shutil.which("jupyter")), "ruta": shutil.which("jupyter"), "detalle": "Notebooks interactivos y documentacion"},
         "spark": {"disponible": bool(shutil.which("spark-submit")), "ruta": shutil.which("spark-submit"), "detalle": "Procesamiento distribuido a gran escala"},

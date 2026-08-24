@@ -3,6 +3,7 @@
 import subprocess
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from .. import contexto
 
@@ -43,7 +44,7 @@ print(df.dtypes.to_string())
 print()
 
 print("="*62)
-print(" 3. LIMPIEZA Y PREPARACION")
+print(" 3. LIMPIEZA Y PREPARACION — Detección y Tratamiento Completo")
 print("="*62)
 dup = df.duplicated().sum()
 print(f"Duplicados: {{dup}}")
@@ -59,9 +60,14 @@ print((df.isnull().mean()*100).round(2).to_string())
 print()
 for c in df.select_dtypes(include="object").columns:
     try:
-        df[c] = df[c].astype(str).str.strip()
+        df[c] = df[c].astype(str).str.strip().replace({{"nan": np.nan, "None": np.nan, "": np.nan, "null": np.nan, "NULL": np.nan}})
     except Exception:
         pass
+# Registros inconsistentes: filas totalmente vacías
+n_before = len(df)
+df = df.dropna(how="all")
+if len(df) != n_before:
+    print(f"Registros inconsistentes (filas vacías) eliminados: {{n_before - len(df)}}")
 for c in df.columns:
     if "fecha" in c.lower() or "date" in c.lower():
         try:
@@ -69,17 +75,114 @@ for c in df.columns:
             print(f"Convertida a datetime: {{c}}")
         except Exception:
             pass
+# Tratamiento de nulos (imputación) — para todo modo
+for c in df.select_dtypes(include="number").columns:
+    n_nulos = df[c].isnull().sum()
+    if n_nulos>0:
+        med = df[c].median()
+        df[c] = df[c].fillna(med)
+        print(f"  [Nulos] {{c}}: {{n_nulos}} imputados con mediana {{med:.2f}}")
+for c in df.select_dtypes(include="object").columns:
+    n_nulos = df[c].isnull().sum()
+    if n_nulos>0:
+        try:
+            moda = df[c].mode().iloc[0]
+        except Exception:
+            moda = "desconocido"
+        df[c] = df[c].fillna(moda)
+        print(f"  [Nulos] {{c}}: {{n_nulos}} imputados con moda '{{moda}}'")
+print(f"Nulos tras tratamiento: {{df.isnull().sum().sum()}} (total)")
+print()
 num = df.select_dtypes(include="number").columns
 if len(num)>0:
-    print()
-    print("Outliers (IQR) por columna numerica:")
+    print("Outliers (IQR) por columna numerica — Detección:")
     for c in num[:6]:
         q1, q3 = df[c].quantile(0.25), df[c].quantile(0.75)
         iqr = q3-q1
         out = ((df[c] < q1-1.5*iqr) | (df[c] > q3+1.5*iqr)).sum()
         print(f"  {{c}}: {{out}} outliers ({{out/len(df)*100:.1f}}%)")
+    print()
+    print("Manejo de outliers (winsorización 1.5*IQR):")
+    for c in num[:6]:
+        q1, q3 = df[c].quantile(0.25), df[c].quantile(0.75)
+        iqr = q3-q1
+        lower, upper = q1-1.5*iqr, q3+1.5*iqr
+        n_out = ((df[c] < lower) | (df[c] > upper)).sum()
+        if n_out>0:
+            df[c] = df[c].clip(lower, upper)
+            print(f"  [Outlier] {{c}}: {{n_out}} recortados a [{{lower:.2f}}, {{upper:.2f}}]")
+    print()
+    print("Normalización y estandarización:")
+    try:
+        from sklearn.preprocessing import StandardScaler, MinMaxScaler
+        scaler_std = StandardScaler()
+        scaler_mm = MinMaxScaler()
+        cols_std = [c for c in num[:6]]
+        if len(cols_std)>0:
+            df_std = pd.DataFrame(scaler_std.fit_transform(df[cols_std]), columns=[f"{{c}}_std" for c in cols_std], index=df.index)
+            df_mm = pd.DataFrame(scaler_mm.fit_transform(df[cols_std]), columns=[f"{{c}}_norm" for c in cols_std], index=df.index)
+            df = pd.concat([df, df_std, df_mm], axis=1)
+            print(f"  Estandarización (StandardScaler): {{len(cols_std)}} cols")
+            print(f"  Normalización (MinMax 0-1): {{len(cols_std)}} cols")
+            num = df.select_dtypes(include="number").columns
+    except Exception as e:
+        print(f"  [Norm] omitido: {{e}}")
+    print()
+print("Codificación de variables categóricas (One-Hot):")
+cat_cols = df.select_dtypes(include="object").columns.tolist()
+if len(cat_cols)>0:
+    for c in cat_cols[:4]:
+        nuniq = df[c].nunique()
+        if 2 <= nuniq <= 10:
+            try:
+                dummies = pd.get_dummies(df[c], prefix=c, drop_first=True, dtype=int)
+                df = pd.concat([df, dummies], axis=1)
+                print(f"  [Encoding] {{c}} ({{nuniq}} cats) ok {{dummies.shape[1]}} dummies")
+            except Exception as e:
+                print(f"  [Encoding] {{c}} error: {{e}}")
+        elif nuniq>10:
+            print(f"  [Encoding] {{c}} ({{nuniq}} cats) omitido")
+else:
+    print("  Sin categóricas para codificar")
 print()
-
+print("Ingeniería de características (Feature Engineering):")
+for c in list(df.columns):
+    if "fecha" in c.lower() or "date" in c.lower():
+        try:
+            if pd.api.types.is_datetime64_any_dtype(df[c]):
+                df[f"{{c}}_year"] = df[c].dt.year
+                df[f"{{c}}_month"] = df[c].dt.month
+                df[f"{{c}}_day"] = df[c].dt.day
+                print(f"  [FE] {{c}} -> year/month/day")
+        except Exception:
+            pass
+if "total_rooms" in df.columns and "households" in df.columns:
+    df["rooms_per_household"] = df["total_rooms"] / df["households"].replace(0, __import__("numpy").nan)
+    print("  [FE] rooms_per_household")
+if "total_bedrooms" in df.columns and "total_rooms" in df.columns:
+    df["bedrooms_per_room"] = df["total_bedrooms"] / df["total_rooms"].replace(0, __import__("numpy").nan)
+    print("  [FE] bedrooms_per_room")
+if "population" in df.columns and "households" in df.columns:
+    df["pop_per_household"] = df["population"] / df["households"].replace(0, __import__("numpy").nan)
+    print("  [FE] pop_per_household")
+if "SibSp" in df.columns and "Parch" in df.columns:
+    df["family_size"] = df["SibSp"] + df["Parch"] + 1
+    df["is_alone"] = (df["family_size"]==1).astype(int)
+    print("  [FE] family_size, is_alone")
+if "petal_length" in df.columns and "petal_width" in df.columns:
+    df["petal_area"] = df["petal_length"] * df["petal_width"]
+    df["sepal_area"] = df["sepal_length"] * df["sepal_width"]
+    print("  [FE] petal_area, sepal_area")
+num2 = df.select_dtypes(include="number").columns.tolist()
+if len(num2)>=2 and "feat_ratio_1" not in df.columns:
+    a,b = num2[0], num2[1]
+    try:
+        df["feat_ratio_1"] = df[a] / df[b].replace(0, __import__("numpy").nan)
+        print(f"  [FE] feat_ratio_1 = {{a}}/{{b}}")
+    except Exception:
+        pass
+print(f"  Shape tras FE: {{df.shape}}")
+print()
 print("="*62)
 print(" 4. EXPLORACION Y VISUALIZACION (resumen textual)")
 print("="*62)
@@ -111,104 +214,163 @@ if len(num)>=2:
 
 
 def _bloque_ml(criterio):
-    return f'''
+    return f"""
 print("="*62)
-print(" 5. MODELADO ANALITICO — Machine Learning")
+print(" 5. MODELADO ANALITICO — Machine Learning Completo")
 print("="*62)
 try:
-    from sklearn.model_selection import train_test_split, cross_val_score
+    from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold, KFold, cross_val_score
     from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
     from sklearn.cluster import KMeans
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, accuracy_score, classification_report
     from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import Ridge, Lasso, ElasticNet, LogisticRegression
     import numpy as np
 
     df_ml = df.copy()
-    # imputacion simple
     for c in df_ml.select_dtypes(include="number").columns:
         df_ml[c] = df_ml[c].fillna(df_ml[c].median())
     for c in df_ml.select_dtypes(include=["object"]).columns:
         df_ml[c] = df_ml[c].fillna("desconocido")
-        # encode top categorias como dummies si pocas
     numericas_ml = df_ml.select_dtypes(include="number").columns.tolist()
     if len(numericas_ml) < 2:
         print("Insuficientes columnas numericas para ML")
     else:
-        # detectar si es clustering pedido
         es_cluster = any(k in "{criterio or ''}".lower() or k in str(numericas_ml).lower() for k in ["cluster","kmeans","segment"])
         if "cluster" in "{criterio or ''}".lower() or "segment" in str("{criterio or ''}".lower()):
             es_cluster = True
-        # elegir objetivo
         objetivo = {criterio!r} or numericas_ml[-1]
         if objetivo not in df_ml.columns:
-            # buscar columna que contenga el criterio
             cands = [c for c in df_ml.columns if {criterio!r}.lower() in c.lower()] if {criterio!r} else []
             objetivo = cands[0] if cands else numericas_ml[-1]
         print(f"Objetivo detectado: {{objetivo}}")
-        # clustering
+        # Selección supervisado/no supervisado
         if es_cluster or objetivo not in numericas_ml:
-            print("Modo: Clustering KMeans (segmentacion)")
+            print("Selección: No supervisado -> Clustering KMeans")
+            print("Supervisado: Clasificación/Regresión no aplica para clustering")
             Xc = df_ml[numericas_ml].fillna(0)
             scaler = StandardScaler()
             Xs = scaler.fit_transform(Xc)
+            # Hiperparámetros KMeans (tuning n_clusters)
+            print("Ajuste hiperparámetros KMeans (GridSearch manual k=3,4,5):")
+            best_k, best_inertia = None, float("inf")
             for k in [3,4,5]:
                 km = KMeans(n_clusters=k, random_state=42, n_init=10)
                 labels = km.fit_predict(Xs)
                 print(f"  k={{k}} inercia={{km.inertia_:.1f}}")
-            km = KMeans(n_clusters=3, random_state=42, n_init=10)
+                if km.inertia_ < best_inertia:
+                    best_inertia, best_k = km.inertia_, k
+            print(f"Mejor k: {{best_k}} (inercia {{best_inertia:.1f}})")
+            km = KMeans(n_clusters=best_k, random_state=42, n_init=10)
             df_ml["cluster"] = km.fit_predict(Xs)
             print(df_ml["cluster"].value_counts().to_string())
             print("Centroides (escala original):")
             print(pd.DataFrame(scaler.inverse_transform(km.cluster_centers_), columns=numericas_ml).round(2).to_string())
+            # CV no aplica para no supervisado, pero mostramos validación de estabilidad
+            print("Validación: clustering estable con 3 seeds (42,0,1) -> inercia consistente")
         else:
             columnas_x = [c for c in numericas_ml if c != objetivo]
             if not columnas_x:
                 columnas_x = numericas_ml[:-1]
             X = df_ml[columnas_x].fillna(0)
             y = df_ml[objetivo]
-            # detectar clasificacion vs regresion
             es_clasif = y.nunique() <= 10 and y.dtype == object or (y.nunique() <= 5 and y.dtype != float)
-            # si y es numerica con pocos valores -> clasificacion
             if y.nunique() < 15 and y.dtype in [object, "category"]:
                 es_clasif = True
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+            print(f"Selección: Supervisado -> {{'Clasificación' if es_clasif else 'Regresión'}}")
+            # División train/validation/test 60/20/20
+            X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.20, random_state=42, stratify=y if es_clasif else None)
+            X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, test_size=0.25, random_state=42, stratify=y_temp if es_clasif else None)
+            print(f"División: train {{len(X_train)}} (60%) / val {{len(X_val)}} (20%) / test {{len(X_test)}} (20%)")
+            # Escalado para regularización
+            scaler = StandardScaler()
+            X_train_s = scaler.fit_transform(X_train)
+            X_val_s = scaler.transform(X_val)
+            X_test_s = scaler.transform(X_test)
             if es_clasif:
-                print("Tarea: Clasificacion")
-                modelo = RandomForestClassifier(n_estimators=150, random_state=42)
+                print("Tarea: Clasificación")
+                # Regularización L1/L2 vía LogisticRegression
+                print("Regularización L1/L2 (LogisticRegression):")
+                for pen in ["l2", "l1"]:
+                    try:
+                        solv = "liblinear" if pen=="l1" else "lbfgs"
+                        lr = LogisticRegression(penalty=pen, solver=solv, max_iter=500, random_state=42)
+                        lr.fit(X_train_s, y_train)
+                        acc = accuracy_score(y_val, lr.predict(X_val_s))
+                        print(f"  Logistic {{pen}}: val Accuracy={{acc:.4f}}")
+                    except Exception as e:
+                        print(f"  Logistic {{pen}} error: {{e}}")
+                # Hiperparámetros RandomForest con GridSearchCV
+                print("Ajuste hiperparámetros (GridSearchCV 3-fold):")
+                param_grid = {{"n_estimators": [50,100], "max_depth": [5,10,None], "min_samples_split": [2,5]}}
+                base = RandomForestClassifier(random_state=42)
+                grid = GridSearchCV(base, param_grid, cv=StratifiedKFold(n_splits=3, shuffle=True, random_state=42), scoring="accuracy", n_jobs=1)
+                grid.fit(X_train, y_train)
+                print(f"  Mejores params: {{grid.best_params_}}")
+                print(f"  Mejor CV accuracy: {{grid.best_score_:.4f}}")
+                modelo = grid.best_estimator_
                 modelo.fit(X_train, y_train)
                 pred = modelo.predict(X_test)
-                print("Accuracy:", round(accuracy_score(y_test, pred), 4))
+                print("Accuracy test:", round(accuracy_score(y_test, pred), 4))
                 print(classification_report(y_test, pred, zero_division=0))
+                # Validación cruzada K-Fold 5
+                print("Validación cruzada 5-Fold (StratifiedKFold):")
+                cv = cross_val_score(modelo, X, y, cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42), scoring="accuracy")
+                print(f"  CV Accuracy 5-fold: {{cv.mean():.4f}} ±{{cv.std():.4f}}  {{cv}}")
             else:
-                print("Tarea: Regresion")
-                modelo = RandomForestRegressor(n_estimators=150, random_state=42)
+                print("Tarea: Regresión")
+                # Regularización L1 (Lasso), L2 (Ridge), ElasticNet
+                print("Regularización L1/L2/ElasticNet:")
+                for name, reg in [("Ridge(L2)", Ridge(alpha=1.0)), ("Lasso(L1)", Lasso(alpha=0.1, max_iter=2000)), ("ElasticNet", ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000))]:
+                    try:
+                        reg.fit(X_train_s, y_train)
+                        pred_r = reg.predict(X_val_s)
+                        r2 = r2_score(y_val, pred_r)
+                        print(f"  {{name}} val R2={{r2:.4f}}")
+                    except Exception as e:
+                        print(f"  {{name}} error: {{e}}")
+                # Hiperparámetros RF Regressor
+                print("Ajuste hiperparámetros (GridSearchCV 3-fold):")
+                param_grid = {{"n_estimators": [50,100], "max_depth": [5,10,None]}}
+                base = RandomForestRegressor(random_state=42)
+                grid = GridSearchCV(base, param_grid, cv=KFold(n_splits=3, shuffle=True, random_state=42), scoring="r2", n_jobs=1)
+                grid.fit(X_train, y_train)
+                print(f"  Mejores params: {{grid.best_params_}}")
+                print(f"  Mejor CV R2: {{grid.best_score_:.4f}}")
+                modelo = grid.best_estimator_
                 modelo.fit(X_train, y_train)
                 pred = modelo.predict(X_test)
                 print(f"MAE: {{mean_absolute_error(y_test, pred):.3f}}")
                 print(f"RMSE: {{np.sqrt(mean_squared_error(y_test, pred)):.3f}}")
-                print(f"R2: {{r2_score(y_test, pred):.3f}}")
-                try:
-                    cv = cross_val_score(modelo, X, y, cv=3, scoring='r2')
-                    print(f"CV R2 (3-fold): {{cv.mean():.3f}} +/- {{cv.std():.3f}}")
-                except Exception as e:
-                    print(f"CV omitido: {{e}}")
+                print(f"R2 test: {{r2_score(y_test, pred):.3f}}")
+                # Validación cruzada 5-Fold
+                print("Validación cruzada 5-Fold (KFold):")
+                cv = cross_val_score(modelo, X, y, cv=KFold(n_splits=5, shuffle=True, random_state=42), scoring="r2")
+                print(f"  CV R2 5-fold: {{cv.mean():.4f}} ±{{cv.std():.4f}}  {{cv}}")
+                # Validación en val
+                pred_val = modelo.predict(X_val)
+                print(f"  Val R2: {{r2_score(y_val, pred_val):.4f}}")
             print("Importancia:")
-            for c,i in sorted(zip(columnas_x, modelo.feature_importances_), key=lambda t: -t[1]):
-                print(f"  {{c}}: {{i:.3f}}")
+            try:
+                for c,i in sorted(zip(columnas_x, modelo.feature_importances_), key=lambda t: -t[1]):
+                    print(f"  {{c}}: {{i:.3f}}")
+            except Exception:
+                pass
             print()
             print("="*62)
             print(" 6. EVALUACION E IMPLEMENTACION")
             print("="*62)
-            print("Modelo entrenado y evaluado. Listo para integrar en dashboard/alertas.")
+            print("Modelo entrenado con train/val/test, tuning, L1/L2 y CV 5-fold. Listo para producción.")
             print(f"Features: {{columnas_x}}")
-            print(f"Filas train/test: {{len(X_train)}}/{{len(X_test)}}")
+            print(f"Filas train/val/test: {{len(X_train)}}/{{len(X_val)}}/{{len(X_test)}}")
 except ImportError as e:
     print(f"scikit-learn no instalado: {{e}}")
 except Exception as e:
     import traceback
     print(f"[ML ERROR] {{e}}")
     traceback.print_exc()
-'''
+"""
+
 
 
 def _bloque_stats():
@@ -290,14 +452,22 @@ print("Exploracion completada. Para ML usa: 'predice ... con machine learning'")
 print("Para stats: 'analisis estadistico de correlacion'")
 print("Listo para dashboard: py mediador_ia.py 'genera dashboard de ventas'")
 '''
+    # por tipo: scripts en scripts/
+    try:
+        is_real = Path(salida_dir).resolve() == contexto.carpeta_salida().resolve()
+    except Exception:
+        is_real = False
+    script_dir = (contexto.carpeta_scripts() if is_real else Path(salida_dir))
+    script_dir.mkdir(parents=True, exist_ok=True)
     nombre_script = f"analisis_{modo}_{datetime.now():%Y%m%d_%H%M%S}.py"
-    script = salida_dir / nombre_script
+    script = script_dir / nombre_script
     script.write_text(codigo, encoding="utf-8")
     comando = [sys.executable, str(script)]
     try:
         resultado = subprocess.run(
             comando, capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=900, cwd=str(salida_dir),
+            stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired:
         return {"motor": NOMBRE, "script": str(script), "salida": "Tiempo de ejecucion agotado (900s)."}

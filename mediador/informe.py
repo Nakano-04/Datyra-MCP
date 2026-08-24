@@ -68,7 +68,9 @@ def _img_to_data_uri(p: Path):
 
 def generar_informe_html(carpeta: Path, peticion, clave, motor, razones, archivo, salida_txt, contexto_txt, script=None, stats=None):
     imagenes = []
-    for p in sorted(carpeta.glob("*.png"), key=lambda x: x.stat().st_mtime, reverse=True)[:6]:
+    # buscar PNGs en central y en hija cuadros (por tipo)
+    png_candidates = list(carpeta.glob("*.png")) + list((carpeta / "cuadros").glob("*.png"))
+    for p in sorted(png_candidates, key=lambda x: x.stat().st_mtime, reverse=True)[:6]:
         uri = _img_to_data_uri(p)
         if uri:
             imagenes.append({"name": p.name, "src": uri})
@@ -80,6 +82,14 @@ def generar_informe_html(carpeta: Path, peticion, clave, motor, razones, archivo
         html = Template(TPL).render(css=CSS_MOD, peticion=peticion, clave=clave, motor=motor, razones=", ".join(razones), archivo=nombre_archivo, script=script or "", salida=salida_txt, contexto_txt=contexto_txt, imagenes=imagenes, stats=stats, fecha=fecha)
     else:
         html = html.replace("{{peticion}}", peticion).replace("{{razones}}", ", ".join(razones)).replace("{{archivo}}", nombre_archivo).replace("{{salida}}", salida_txt).replace("{{contexto_txt}}", contexto_txt)
-    out = carpeta / f"informe_{datetime.now():%Y%m%d_%H%M%S}.html"
+    # por tipo: html en html/, central para archivo único completo
+    try:
+        from .contexto import carpeta_salida as _cs
+        is_real = carpeta.resolve() == _cs().resolve()
+    except Exception:
+        is_real = False
+    out_dir = (carpeta / "html") if is_real else carpeta
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"informe_{datetime.now():%Y%m%d_%H%M%S}.html"
     out.write_text(html, encoding="utf-8")
     return out

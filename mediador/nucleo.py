@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import contexto, herramientas
-from .motores import jupyter_motor, python_motor, r_motor, spark_motor, sql_motor, visual_motor
+from .motores import api_motor, jupyter_motor, python_motor, r_motor, spark_motor, sql_motor, streaming_motor, visual_motor
 
 try:
     from rich.console import Console
@@ -20,6 +20,17 @@ except ImportError:
     console = None
 
 PATRONES = {
+    "api": [
+        "api", "rest", "endpoint", "extrae", "extraer", "httpx", "json api", "fetch", "url http",
+        "extraccion", "fuente externa", "open api", "identifica", "fuentes relevantes", "catalogo",
+    ],
+    "streaming": [
+        "streaming", "tiempo real", "real-time", "realtime", "kafka", "kinesis", "stream", "evento", "sensor",
+        "cola", "broker", "colecta",
+    ],
+    "lake": [
+        "lake", "data lake", "datalake", "bronze", "silver", "gold", "warehouse", "consolida", "consolidar", "delta", "metadatos", "linaje",
+    ],
     "machine_learning": [
         "machine learning", "ml ", " modelo", "entrenar", "clasificacion", "prediccion",
         "scikit", "sklearn", "cluster", "kmeans", "prediga", "predice", "predecir",
@@ -29,7 +40,7 @@ PATRONES = {
         "normalidad", "prueba t", "anova", "test", "analisis estadistico",
     ],
     "big_data": [
-        "big data", "spark", "distribuido", "gran escala", "streaming", "millones de",
+        "big data", "spark", "distribuido", "gran escala", "millones de",
         "masivo", "parquet",
     ],
     "sql": [
@@ -51,6 +62,9 @@ PATRONES = {
 }
 
 MOTOR_POR_CLAVE = {
+    "api": api_motor,
+    "streaming": streaming_motor,
+    "lake": api_motor,  # lake usa api_motor para consolidación
     "machine_learning": python_motor,
     "estadistica": r_motor,
     "big_data": spark_motor,
@@ -62,6 +76,9 @@ MOTOR_POR_CLAVE = {
 }
 
 ORDEN_PRECEDENCIA = [
+    "api",
+    "streaming",
+    "lake",
     "machine_learning",
     "big_data",
     "sql",
@@ -139,7 +156,7 @@ def listar_herramientas():
     return "HERRAMIENTAS DISPONIBLES EN EL SISTEMA:\n" + herramientas.resumen()
 
 
-def ejecutar_peticion(peticion, salida_dir=None):
+def ejecutar_peticion(peticion, salida_dir=None, silent=False):
     carpeta = Path(salida_dir) if salida_dir else contexto.carpeta_salida()
     carpeta.mkdir(parents=True, exist_ok=True)
     inventario = contexto.inventario()
@@ -153,8 +170,9 @@ def ejecutar_peticion(peticion, salida_dir=None):
     lote = _elegir_todos(peticion, inventario)
     if lote:
         for arch in lote:
-            print(f"\n>>> BATCH: {arch['ruta'].name}")
-            ejecutar_peticion(f"{peticion} {arch['ruta'].stem}", salida_dir=str(carpeta))
+            if not silent:
+                print(f"\n>>> BATCH: {arch['ruta'].name}")
+            ejecutar_peticion(f"{peticion} {arch['ruta'].stem}", salida_dir=str(carpeta), silent=silent)
         return {"motor": "batch", "salida": f"Batch completado: {len(lote)} archivos"}
     archivo = _elegir_archivo(peticion, inventario)
     modo = "ml" if clave == "machine_learning" else ("stats" if clave == "estadistica" else "analisis")
@@ -168,23 +186,24 @@ def ejecutar_peticion(peticion, salida_dir=None):
     else:
         lineas.append("ARCHIVO DE TRABAJO: ninguno (solo contexto)")
     lineas.append("=" * 60)
-    if HAS_RICH and sys.stdout.isatty():
-        console.print(Panel(linea_contexto, title="◈ MEDIADOR_IA", border_style="cyan", box=box.ROUNDED))
-        grid = Table.grid(padding=(0,2))
-        grid.add_column(style="bold cyan")
-        grid.add_column(style="white")
-        grid.add_row("Petición:", f"[white]{peticion}[/white]")
-        grid.add_row("Intención:", f"[magenta]{clave}[/magenta]  [dim]{', '.join(razones)}[/dim]")
-        grid.add_row("Motor:", f"[green]{motor.NOMBRE}[/green] — {motor.DESCRIPCION}")
-        grid.add_row("Archivo:", f"[yellow]{archivo['ruta'].name if archivo else '—'}[/yellow]")
-        console.print(Panel(grid, title="⚡ Ejecución", border_style="magenta", box=box.ROUNDED))
-        console.print(f"[dim]Ejecutando motor '{motor.NOMBRE}'...[/dim]")
-    else:
-        print("\n".join(lineas))
-        print()
-        print(f"Ejecutando motor '{motor.NOMBRE}'...")
-        print()
-    if HAS_RICH and sys.stdout.isatty():
+    if not silent:
+        if HAS_RICH and sys.stdout.isatty():
+            console.print(Panel(linea_contexto, title="◈ MEDIADOR_IA", border_style="cyan", box=box.ROUNDED))
+            grid = Table.grid(padding=(0,2))
+            grid.add_column(style="bold cyan")
+            grid.add_column(style="white")
+            grid.add_row("Petición:", f"[white]{peticion}[/white]")
+            grid.add_row("Intención:", f"[magenta]{clave}[/magenta]  [dim]{', '.join(razones)}[/dim]")
+            grid.add_row("Motor:", f"[green]{motor.NOMBRE}[/green] — {motor.DESCRIPCION}")
+            grid.add_row("Archivo:", f"[yellow]{archivo['ruta'].name if archivo else '—'}[/yellow]")
+            console.print(Panel(grid, title="⚡ Ejecución", border_style="magenta", box=box.ROUNDED))
+            console.print(f"[dim]Ejecutando motor '{motor.NOMBRE}'...[/dim]")
+        else:
+            print("\n".join(lineas))
+            print()
+            print(f"Ejecutando motor '{motor.NOMBRE}'...")
+            print()
+    if HAS_RICH and sys.stdout.isatty() and not silent:
         with console.status(f"[cyan]Procesando con {motor.NOMBRE}...", spinner="dots12"):
             resultado = motor.ejecutar(peticion, archivo, carpeta, modo=modo)
     else:
@@ -194,7 +213,15 @@ def ejecutar_peticion(peticion, salida_dir=None):
         informe += f"\n\nScript generado: {resultado['script']}"
     if resultado.get("comando"):
         informe += f"\nComando: {' '.join(map(str, resultado['comando']))}"
-    archivo_informe = carpeta / f"informe_{datetime.now():%Y%m%d_%H%M%S}.txt"
+    # por tipo: txt en txt/, html en html/, central para archivo único
+    is_real = False
+    try:
+        is_real = carpeta.resolve() == contexto.carpeta_salida().resolve()
+    except Exception:
+        pass
+    txt_dir = (contexto.carpeta_txt() if is_real else carpeta)
+    txt_dir.mkdir(parents=True, exist_ok=True)
+    archivo_informe = txt_dir / f"informe_{datetime.now():%Y%m%d_%H%M%S}.txt"
     archivo_informe.write_text(informe, encoding="utf-8")
     try:
         from .informe import generar_informe_html
@@ -204,17 +231,57 @@ def ejecutar_peticion(peticion, salida_dir=None):
         html_path = generar_informe_html(carpeta, peticion, clave, f"{motor.NOMBRE} — {motor.DESCRIPCION}", razones, archivo, resultado["salida"], "\n".join(lineas), script=resultado.get("script"), stats=stats)
     except Exception as e:
         html_path = None
-    if HAS_RICH and sys.stdout.isatty():
-        console.print(Panel(resultado["salida"][:4000], title="✔ Resultado", border_style="green", box=box.ROUNDED))
-        console.print(f"[dim]TXT:[/dim] {archivo_informe}")
-        if html_path:
-            console.print(f"[bold cyan]HTML MOD:[/bold cyan] {html_path}  [dim](abre en navegador)[/dim]")
-    else:
-        print(resultado["salida"])
-        print()
-        print(f"Informe guardado en: {archivo_informe}")
-        if html_path:
-            print(f"Informe HTML MOD: {html_path}")
+    # Data Lake por capas (bronze/silver/gold) y catálogo metadatos/linaje
+    try:
+        if is_real and archivo:
+            bronze = contexto.carpeta_lake("bronze")
+            # bronze: copia raw si no existe
+            import shutil
+            bronze_dest = bronze / archivo["ruta"].name
+            if not bronze_dest.exists():
+                try:
+                    shutil.copy2(str(archivo["ruta"]), str(bronze_dest))
+                except: pass
+        if is_real:
+            try:
+                import json
+                catalogo = contexto.catalogo_metadatos()
+                central = contexto.carpeta_central()
+                (central / "catalogo_metadatos.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=2), encoding="utf-8")
+                # también en raíz salida para compatibilidad
+                (contexto.carpeta_salida() / "catalogo_metadatos.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=2), encoding="utf-8")
+                linaje_path = central / "linaje.json"
+                linaje = {
+                    "ultima_peticion": peticion,
+                    "motor": motor.NOMBRE,
+                    "archivo": str(archivo["ruta"]) if archivo else None,
+                    "timestamp": datetime.now().isoformat(),
+                    "salida": str(archivo_informe),
+                    "html": str(html_path) if html_path else None,
+                    "lake": {
+                        "bronze": str(contexto.carpeta_lake("bronze")),
+                        "silver": str(contexto.carpeta_lake("silver")),
+                        "gold": str(contexto.carpeta_lake("gold"))
+                    }
+                }
+                linaje_path.write_text(json.dumps(linaje, ensure_ascii=False, indent=2), encoding="utf-8")
+                (contexto.carpeta_salida() / "linaje.json").write_text(json.dumps(linaje, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+    except Exception:
+        pass
+    if not silent:
+        if HAS_RICH and sys.stdout.isatty():
+            console.print(Panel(resultado["salida"][:4000], title="✔ Resultado", border_style="green", box=box.ROUNDED))
+            console.print(f"[dim]TXT:[/dim] {archivo_informe}")
+            if html_path:
+                console.print(f"[bold cyan]HTML MOD:[/bold cyan] {html_path}  [dim](abre en navegador)[/dim]")
+        else:
+            print(resultado["salida"])
+            print()
+            print(f"Informe guardado en: {archivo_informe}")
+            if html_path:
+                print(f"Informe HTML MOD: {html_path}")
     return resultado
 
 
