@@ -117,7 +117,7 @@ def _elegir_todos(peticion, inventario):
 def listar_contexto():
     inventario = contexto.inventario()
     if HAS_RICH and sys.stdout.isatty():
-        t = Table(title="◈ CONTEXTO DE DATOS — Recursos/", box=box.ROUNDED, border_style="cyan", header_style="bold cyan", title_style="bold white")
+        t = Table(title="◈ CONTEXTO DE DATOS - Recursos/", box=box.ROUNDED, border_style="cyan", header_style="bold cyan", title_style="bold white")
         t.add_column("Tipo", style="bold magenta", justify="center")
         t.add_column("Tamaño", style="dim", justify="right")
         t.add_column("Filas", justify="right")
@@ -194,7 +194,7 @@ def ejecutar_peticion(peticion, salida_dir=None, silent=False):
             grid.add_column(style="white")
             grid.add_row("Petición:", f"[white]{peticion}[/white]")
             grid.add_row("Intención:", f"[magenta]{clave}[/magenta]  [dim]{', '.join(razones)}[/dim]")
-            grid.add_row("Motor:", f"[green]{motor.NOMBRE}[/green] — {motor.DESCRIPCION}")
+            grid.add_row("Motor:", f"[green]{motor.NOMBRE}[/green] - {motor.DESCRIPCION}")
             grid.add_row("Archivo:", f"[yellow]{archivo['ruta'].name if archivo else '—'}[/yellow]")
             console.print(Panel(grid, title="⚡ Ejecución", border_style="magenta", box=box.ROUNDED))
             console.print(f"[dim]Ejecutando motor '{motor.NOMBRE}'...[/dim]")
@@ -228,7 +228,7 @@ def ejecutar_peticion(peticion, salida_dir=None, silent=False):
         stats = []
         for a in inventario[:4]:
             stats.append({"k": a['ruta'].name[:14], "v": f"{a['filas'] or '-'} filas"})
-        html_path = generar_informe_html(carpeta, peticion, clave, f"{motor.NOMBRE} — {motor.DESCRIPCION}", razones, archivo, resultado["salida"], "\n".join(lineas), script=resultado.get("script"), stats=stats)
+        html_path = generar_informe_html(carpeta, peticion, clave, f"{motor.NOMBRE} - {motor.DESCRIPCION}", razones, archivo, resultado["salida"], "\n".join(lineas), script=resultado.get("script"), stats=stats)
     except Exception as e:
         html_path = None
     # Data Lake por capas (bronze/silver/gold) y catálogo metadatos/linaje
@@ -291,7 +291,7 @@ def repl():
     except ImportError:
         pass
     if HAS_RICH and sys.stdout.isatty():
-        console.print(Panel("[bold cyan]◈ MEDIADOR_IA[/bold cyan]  [dim]v1.0 — escribe tu petición en lenguaje natural[/dim]\n[dim]Comandos:[/dim] [cyan]-l[/cyan] contexto  [cyan]-t[/cyan] herramientas  [cyan]salir[/cyan]  [cyan]!comando[/cyan]", border_style="cyan", box=box.ROUNDED, title="⚡ Mediador de Contexto"))
+        console.print(Panel("[bold cyan]◈ MEDIADOR_IA[/bold cyan]  [dim]v1.0 - escribe tu petición en lenguaje natural[/dim]\n[dim]Comandos:[/dim] [cyan]-l[/cyan] contexto  [cyan]-t[/cyan] herramientas  [cyan]salir[/cyan]  [cyan]!comando[/cyan]", border_style="cyan", box=box.ROUNDED, title="⚡ Mediador de Contexto"))
     else:
         print("Mediador de Contexto IA (enter 'salir' o Ctrl+C para terminar)")
     while True:

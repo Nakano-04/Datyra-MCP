@@ -1,4 +1,4 @@
-"""Motor Python: ciclo completo 1-6 sin transversal — limpieza, EDA, modelado y evaluacion."""
+"""Motor Python: ciclo completo 1-6 sin transversal - limpieza, EDA, modelado y evaluacion."""
 
 import subprocess
 import sys
@@ -44,7 +44,7 @@ print(df.dtypes.to_string())
 print()
 
 print("="*62)
-print(" 3. LIMPIEZA Y PREPARACION — Detección y Tratamiento Completo")
+print(" 3. LIMPIEZA Y PREPARACION - Detección y Tratamiento Completo")
 print("="*62)
 dup = df.duplicated().sum()
 print(f"Duplicados: {{dup}}")
@@ -75,7 +75,7 @@ for c in df.columns:
             print(f"Convertida a datetime: {{c}}")
         except Exception:
             pass
-# Tratamiento de nulos (imputación) — para todo modo
+# Tratamiento de nulos (imputación) - para todo modo
 for c in df.select_dtypes(include="number").columns:
     n_nulos = df[c].isnull().sum()
     if n_nulos>0:
@@ -95,7 +95,7 @@ print(f"Nulos tras tratamiento: {{df.isnull().sum().sum()}} (total)")
 print()
 num = df.select_dtypes(include="number").columns
 if len(num)>0:
-    print("Outliers (IQR) por columna numerica — Detección:")
+    print("Outliers (IQR) por columna numerica - Detección:")
     for c in num[:6]:
         q1, q3 = df[c].quantile(0.25), df[c].quantile(0.75)
         iqr = q3-q1
@@ -216,7 +216,7 @@ if len(num)>=2:
 def _bloque_ml(criterio):
     return f"""
 print("="*62)
-print(" 5. MODELADO ANALITICO — Machine Learning Completo")
+print(" 5. MODELADO ANALITICO - Machine Learning Completo")
 print("="*62)
 try:
     from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold, KFold, cross_val_score
@@ -376,7 +376,7 @@ except Exception as e:
 def _bloque_stats():
     return f'''
 print("="*62)
-print(" 5. MODELADO ANALITICO — Estadistica")
+print(" 5. MODELADO ANALITICO - Estadistica")
 print("="*62)
 try:
     from scipy import stats

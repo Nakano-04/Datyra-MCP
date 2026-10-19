@@ -8,7 +8,7 @@ from pathlib import Path
 from .. import contexto
 
 NOMBRE = "streaming"
-DESCRIPCION = "Recolección tiempo real (streaming) — buffer + Data Lake"
+DESCRIPCION = "Recolección tiempo real (streaming) - buffer + Data Lake"
 
 
 def disponible():

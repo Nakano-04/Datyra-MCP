@@ -1,5 +1,5 @@
-"""MCP Server real para Datyra MCP — FastMCP stdio + streamable-http.
-Autor: Nakano-04 — Mercenary Company “Mercenario del rojo”
+"""MCP Server real para Datyra MCP - FastMCP stdio + streamable-http.
+Autor: Nakano-04 - Mercenary Company “Mercenario del rojo”
   Software Engineer (Cybersecurity · AI · Systems · ERP)
   Building security tools, AI systems, ERP modules & research
   Contact: nakano.04.2025@gmail.com
@@ -26,7 +26,7 @@ try:
 except Exception:
     pass
 
-AUTHOR = "Nakano-04 — Mercenary Company 'Mercenario del rojo' | Software Engineer (Cybersecurity · AI · Systems · ERP) | nakano.04.2025@gmail.com | https://github.com/Nakano-04"
+AUTHOR = "Nakano-04 - Mercenary Company 'Mercenario del rojo' | Software Engineer (Cybersecurity · AI · Systems · ERP) | nakano.04.2025@gmail.com | https://github.com/Nakano-04"
 
 mcp = FastMCP(
     name="datyra-mcp",
@@ -36,7 +36,7 @@ mcp = FastMCP(
 @mcp.tool()
 def author_info() -> str:
     """Devuelve info del autor del proyecto."""
-    return json.dumps({"autor": "Nakano-04", "alias": "Mercenario del rojo", "company": "Mercenary Company", "rol": "Software Engineer (Cybersecurity · AI · Systems · ERP)", "focus": "Building security tools, AI systems, ERP modules & research", "email": "nakano.04.2025@gmail.com", "github": "https://github.com/Nakano-04", "mcp": "datyra-mcp", "compatible": "Toda IA con MCP — Claude, Devin, Codex, opencode, Cursor, Windsurf, Copilot, Gemini, ChatGPT"}, ensure_ascii=False, indent=2)
+    return json.dumps({"autor": "Nakano-04", "alias": "Mercenario del rojo", "company": "Mercenary Company", "rol": "Software Engineer (Cybersecurity · AI · Systems · ERP)", "focus": "Building security tools, AI systems, ERP modules & research", "email": "nakano.04.2025@gmail.com", "github": "https://github.com/Nakano-04", "mcp": "datyra-mcp", "compatible": "Toda IA con MCP - Claude, Devin, Codex, opencode, Cursor, Windsurf, Copilot, Gemini, ChatGPT"}, ensure_ascii=False, indent=2)
 
 @mcp.tool()
 def list_datasets() -> str:

@@ -1,8 +1,8 @@
-# ◈ Datyra MCP — Mediador de Contexto IA
+# ◈ Datyra MCP - Mediador de Contexto IA
 
-> **Autor: Nakano-04 — Mercenary Company “Mercenario del rojo”** · Software Engineer (Cybersecurity · AI · Systems · ERP) · Building security tools, AI systems, ERP modules & research · ✉️ nakano.04.2025@gmail.com · 🔗 https://github.com/Nakano-04
+> **Autor: Nakano-04 - Mercenary Company “Mercenario del rojo”** · Software Engineer (Cybersecurity · AI · Systems · ERP) · Building security tools, AI systems, ERP modules & research · ✉️ nakano.04.2025@gmail.com · 🔗 https://github.com/Nakano-04
 
-> Orquestador inteligente + **MCP Server real universal** que entiende lenguaje natural y enruta automáticamente: **Python · R · SQL · Spark · Jupyter · Power BI · Tableau** — compatible con **toda IA que hable MCP**.
+> Orquestador inteligente + **MCP Server real universal** que entiende lenguaje natural y enruta automáticamente: **Python · R · SQL · Spark · Jupyter · Power BI · Tableau** - compatible con **toda IA que hable MCP**.
 
 ![version](https://img.shields.io/badge/version-1.2.0_MCP-00D1FF?style=flat-square) ![python](https://img.shields.io/badge/python-3.10%2B-151a23?style=flat-square) ![mcp](https://img.shields.io/badge/MCP-1.29-FB5607?style=flat-square) ![style](https://img.shields.io/badge/style-MOD%20dark-FF006E?style=flat-square) ![license](https://img.shields.io/badge/license-Apache%202.0-8b949e?style=flat-square)
 
@@ -19,37 +19,37 @@ Mediador CLI + HTML MOD + **MCP Server** que analiza cualquier archivo en `Recur
 "haz analisis estadistico correlacion"
 ```
 
-Para humanos → CLI. Para IAs → MCP tools (Claude, Devin, Codex, opencode, Cursor, Windsurf, Copilot, Gemini, ChatGPT y cualquier otra con MCP — protocolo abierto).
+Para humanos → CLI. Para IAs → MCP tools (Claude, Devin, Codex, opencode, Cursor, Windsurf, Copilot, Gemini, ChatGPT y cualquier otra con MCP - protocolo abierto).
 
 ---
 
-## 2. MCP Server — 10 herramientas (universal)
+## 2. MCP Server - 10 herramientas (universal)
 
-`mcp_server.py` (FastMCP, stdio + http) expone ciclo 1-6 completo — **universal para toda IA**:
+`mcp_server.py` (FastMCP, stdio + http) expone ciclo 1-6 completo - **universal para toda IA**:
 
 | Herramienta | Descripción | Ejemplo |
 |-------------|-------------|---------|
 | `analyze_data` | Lenguaje natural → motor correcto | `analiza ciberseguridad` |
-| `list_datasets` | Inventario `Recursos/` | — |
+| `list_datasets` | Inventario `Recursos/` | - |
 | `run_statistics` | Pearson/Spearman/Shapiro/IQR | `correlacion monto vs score` |
 | `train_model` | RF regresión/clasificación + KMeans | `predice moroso` |
 | `generate_dashboard` | 4 PNGs MOD 180dpi + HTML | `dashboard mineria` |
 | `batch_process` | Todos los CSVs batch | `todos batch` |
 | `profile_data` | Preview + describe | `finanzas_masivo.csv` |
 | `query_sql` | SQL sobre sqlite/duckdb | `SELECT region, SUM(ingreso)...` |
-| `get_tool_status` | Motores disponibles | — |
-| `author_info` | Info Nakano-04 / Mercenary Company | — |
+| `get_tool_status` | Motores disponibles | - |
+| `author_info` | Info Nakano-04 / Mercenary Company | - |
 
 **Beneficios universales (cualquier IA con MCP):**
 
 - **Devin:** análisis directo, reportes en workflow, logs/métricas auto
 - **Claude:** stats complejos, dashboards, Spark masivo
 - **Codex/opencode/Cursor/Windsurf/Copilot:** sugerencias por patrones, autocompletado, genera código DS
-- **Gemini/ChatGPT/otras:** mismo `mcp.json` — protocolo estándar, no vendor lock-in
+- **Gemini/ChatGPT/otras:** mismo `mcp.json` - protocolo estándar, no vendor lock-in
 
 ### Configuración universal
 
-**Cualquier IA con MCP — Claude Desktop, opencode, Cursor, Windsurf, VS Code, Windsurf, Copilot, Gemini CLI, etc. (`%APPDATA%\Claude\claude_desktop_config.json` / `mcp.json` / `.cursor/mcp.json`):**
+**Cualquier IA con MCP - Claude Desktop, opencode, Cursor, Windsurf, VS Code, Windsurf, Copilot, Gemini CLI, etc. (`%APPDATA%\Claude\claude_desktop_config.json` / `mcp.json` / `.cursor/mcp.json`):**
 
 ```json
 {
@@ -79,7 +79,7 @@ Extra: `profile_data` + `query_sql` + `get_tool_status` como características pl
 
 **CLI con Rich:** tablas cyan/magenta, panels, spinner `dots12`.
 **Informe HTML MOD** `salida/informe_*.html`: header gradiente `#0a0e14→#1a1033`, badges neon, galería base64.
-**Gráficos MOD** `visual_motor.py`: histograma KDE, barras horizontales, heatmap anotado, serie temporal — `180dpi`, `seaborn`, fondo `#151a23`, paleta neon.
+**Gráficos MOD** `visual_motor.py`: histograma KDE, barras horizontales, heatmap anotado, serie temporal - `180dpi`, `seaborn`, fondo `#151a23`, paleta neon.
 
 ---
 
@@ -122,7 +122,7 @@ py mediador_ia.py "analiza las ventas"  # test rapido
 npm install -g opencode-ai@latest
 opencode --version  # verificar 1.18.22+
 ```
-**Configurar MCP** — crea `opencode.json` en tu proyecto o global `~/.config/opencode/opencode.jsonc`:
+**Configurar MCP** - crea `opencode.json` en tu proyecto o global `~/.config/opencode/opencode.jsonc`:
 ```json
 {
   "mcp": {
@@ -216,13 +216,13 @@ Formatos soportados: `csv/tsv/csv.gz, xlsx/xls, json, parquet, db/sqlite/duckdb,
 
 ## 12. Autor
 
-**Nakano-04 — Mercenary Company “Mercenario del rojo”**
+**Nakano-04 - Mercenary Company “Mercenario del rojo”**
 Software Engineer (Cybersecurity · AI · Systems · ERP)
 Building security tools, AI systems, ERP modules & research
 📧 nakano.04.2025@gmail.com · 🔗 https://github.com/Nakano-04
 
 ## 13. Licencia
 
-Apache 2.0 — ver `LICENSE`.
+Apache 2.0 - ver `LICENSE`.
 
-Hecho con `pandas · seaborn · rich · jinja2 · mcp` estilo MOD dark — Datyra MCP by Nakano-04.
+Hecho con `pandas · seaborn · rich · jinja2 · mcp` estilo MOD dark - Datyra MCP by Nakano-04.

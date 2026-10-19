@@ -1,4 +1,4 @@
-﻿"""Motor R: ciclo 1-6 — limpieza, EDA, modelado y evaluacion con R."""
+﻿"""Motor R: ciclo 1-6 - limpieza, EDA, modelado y evaluacion con R."""
 
 import shutil
 import subprocess
@@ -7,7 +7,7 @@ from datetime import datetime
 from .. import contexto
 
 NOMBRE = "r"
-DESCRIPCION = "Ciclo 1-6 estadistico (R / Rscript) — limpieza, EDA, correl, Shapiro, clustering"
+DESCRIPCION = "Ciclo 1-6 estadistico (R / Rscript) - limpieza, EDA, correl, Shapiro, clustering"
 
 
 def disponible():
@@ -52,7 +52,7 @@ cat("==============================================\\n")
 print(summary(df)); cat("\\n"); print(head(df,10))
 
 cat("\\n==============================================\\n")
-cat(" 5. MODELADO — Correlacion, normalidad, clustering\\n")
+cat(" 5. MODELADO - Correlacion, normalidad, clustering\\n")
 cat("==============================================\\n")
 num <- df[sapply(df, is.numeric)]
 if (ncol(num) >= 2) {{

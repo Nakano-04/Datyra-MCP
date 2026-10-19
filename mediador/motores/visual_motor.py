@@ -109,7 +109,7 @@ if len(numericas) > 0:
     col = numericas[0]
     fig, ax = plt.subplots(figsize=(10, 4.2), dpi=180)
     sns.histplot(df[col].dropna(), bins=24, ax=ax, color=PALETA[0], edgecolor=BG, linewidth=1, alpha=0.95, kde=True, line_kws={"color": PALETA[1], "lw":1.5})
-    estilo(fig, ax, f"Distribucion — {col}", f"n={df[col].dropna().shape[0]} · Mediador IA MOD")
+    estilo(fig, ax, f"Distribucion - {col}", f"n={df[col].dropna().shape[0]} · Mediador IA MOD")
     ax.set_xlabel(col, fontsize=9)
     ax.set_ylabel("Frecuencia", fontsize=9)
     plt.tight_layout()
@@ -124,7 +124,7 @@ if len(categoricas) > 0:
     fig, ax = plt.subplots(figsize=(10, 4.6), dpi=180)
     bars = ax.barh(conteos.index[::-1], conteos.values[::-1], color=PALETA, edgecolor=BG, height=0.62)
     ax.bar_label(bars, padding=6, fontsize=8, color=TEXT)
-    estilo(fig, ax, f"Top categorias — {col}", "Barras horizontales · MOD dark")
+    estilo(fig, ax, f"Top categorias - {col}", "Barras horizontales · MOD dark")
     ax.set_xlabel("Conteo")
     plt.tight_layout()
     archivo2 = os.path.join(ruta_salida, f"barras_{col}_{marca}.png")
@@ -148,7 +148,7 @@ if len(numericas) >= 2:
     plt.close()
     print("Grafico 3:", archivo3)
 
-# Boxplot — distribución
+# Boxplot - distribución
 try:
     if len(numericas) > 0:
         fig, ax = plt.subplots(figsize=(10, 4.5), dpi=180)
@@ -157,10 +157,10 @@ try:
             top_cats = df[cat].value_counts().head(4).index
             df_box = df[df[cat].isin(top_cats)]
             sns.boxplot(data=df_box, x=cat, y=numericas[0], ax=ax, palette=PALETA, linewidth=1.2, fliersize=3)
-            estilo(fig, ax, f"Boxplot — {numericas[0]} por {cat}", "Distribución y outliers · MOD")
+            estilo(fig, ax, f"Boxplot - {numericas[0]} por {cat}", "Distribución y outliers · MOD")
         else:
             sns.boxplot(data=df[numericas[:4]], ax=ax, palette=PALETA, linewidth=1.2, fliersize=3)
-            estilo(fig, ax, "Boxplots — variables numéricas", "Distribución · MOD")
+            estilo(fig, ax, "Boxplots - variables numéricas", "Distribución · MOD")
         ax.tick_params(axis='x', rotation=18)
         plt.tight_layout()
         archivo_box = os.path.join(ruta_salida, f"boxplot_{marca}.png")
@@ -180,7 +180,7 @@ try:
         df_pair = df[cols].dropna().head(500)
         if len(df_pair) >= 10:
             g = sns.pairplot(df_pair, diag_kind="kde", plot_kws={"alpha":0.6, "s":18, "edgecolor": BG}, diag_kws={"color": PALETA[0]})
-            g.fig.suptitle(f"Scatter Matrix — {', '.join(cols)}", fontsize=13, fontweight="800", color=TEXT, y=1.02)
+            g.fig.suptitle(f"Scatter Matrix - {', '.join(cols)}", fontsize=13, fontweight="800", color=TEXT, y=1.02)
             for ax in g.axes.flatten():
                 if ax is not None:
                     ax.set_facecolor(CARD)
@@ -205,7 +205,7 @@ try:
             fig, ax = plt.subplots(figsize=(10, 3.8), dpi=180)
             ax.plot(tmp[fecha_col], tmp[ycol], color=PALETA[0], lw=2.2, marker="o", markersize=4, markerfacecolor=PALETA[1], markeredgecolor=BG)
             ax.fill_between(tmp[fecha_col], tmp[ycol], alpha=0.12, color=PALETA[0])
-            estilo(fig, ax, f"Evolucion — {ycol} en el tiempo", f"{fecha_col} vs {ycol}")
+            estilo(fig, ax, f"Evolucion - {ycol} en el tiempo", f"{fecha_col} vs {ycol}")
             ax.set_xlabel(fecha_col); ax.set_ylabel(ycol)
             fig.autofmt_xdate(rotation=28)
             plt.tight_layout()

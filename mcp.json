@@ -3,8 +3,8 @@
     "datyra-mcp": {
       "command": "py",
       "args": ["C:\\Users\\USER1\\Desktop\\test\\cs2\\Mediador-Analisis-de-Datos\\mcp_server.py"],
-      "description": "Datyra MCP by Nakano-04 — Mercenary Company. Mediador universal para toda IA con MCP",
-      "author": "Nakano-04 — nakano.04.2025@gmail.com — https://github.com/Nakano-04"
+      "description": "Datyra MCP by Nakano-04 - Mercenary Company. Mediador universal para toda IA con MCP",
+      "author": "Nakano-04 - nakano.04.2025@gmail.com - https://github.com/Nakano-04"
     }
   }
 }

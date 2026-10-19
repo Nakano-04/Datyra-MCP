@@ -43,7 +43,7 @@ def carpeta_recursos():
 def carpeta_salida():
     carpeta = carpeta_base() / "salida"
     carpeta.mkdir(exist_ok=True)
-    # hijas por tipo — central queda para archivo único completo
+    # hijas por tipo - central queda para archivo único completo
     for sub in ["cuadros", "html", "txt", "scripts", "central"]:
         (carpeta / sub).mkdir(exist_ok=True)
     return carpeta
